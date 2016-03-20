@@ -1,74 +1,105 @@
-"use strict";
+(function() {
+    "use strict";
 
-const fs = require("fs");
-const path = require("path");
-const crypto = require('crypto');
+    const fs = require("fs");
 
-const tree = require("./client/tree");
+    const tree = require("./tree");
+    const fsgeo = require("./fs-geometry");
 
-// bounds like { x, y, w, h }
-const drawTree = function(filetree, ctx, bounds, vertical) {
-    console.log(Object.keys(filetree));
+    const canvas = document.getElementById("viewport");
 
-    const sum = (arr) => arr.reduce((t, v) => t + v, 0);
-    
-    const normalize = (arr) => {
-        const total = sum(arr);
-        return arr.map((v) => v / total);
+    // handle resize
+    window.onresize = function(event) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        renderer.setSize(window.innerWidth, window.innerHeight);
     };
 
-    if (filetree.type === "file") {
-        //console.log("dead", tree);
-        const rc = () => Math.floor(256 * Math.random());
-        ctx.fillStyle = `rgb(${rc()},${rc()},${rc()})`;
-        ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
-    } else {
-        const sizes = [];
-        const nodes = [];
-        for (let key in filetree) {
-            let node = filetree[key];
-            sizes.push(tree.treesum(node));
-            nodes.push(node);
-        }
+    var scene, camera, renderer;
+    var geometry, material, rootObj;
+    let vx = 0;
+    let vy = 0;
 
-        const norm = normalize(sizes);
+    function init() {
+        scene = new THREE.Scene();
 
-        // TODO refactor for DRY
-        if (vertical) {
-            for (let i = 0, y = bounds.y; i < norm.length; i++) {
-                const thickness = norm[i] * bounds.height;
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+        camera.position.z = 800;
 
-                const innerbounds = {
-                    x: bounds.x, y: y,
-                    width: bounds.width, height: thickness
-                };
+        let wireMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+        let solidMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide });
 
-                drawTree(nodes[i], ctx, innerbounds, !vertical);
+        const ftree = tree.getFileTree("./node_modules");
+        const fsGeometry = fsgeo.build(ftree, { x: 0, y: 0, z: 0, width: 512, height: 512, step: 1 });
 
-                y += thickness;
-            }
-        } else {
-            for (let i = 0, x = bounds.x; i < norm.length; i++) {
-                const thickness = norm[i] * bounds.width;
+        rootObj = new THREE.Object3D();
 
-                const innerbounds = {
-                    x: x, y: bounds.y,
-                    width: thickness, height: bounds.height
-                };
+        fsGeometry.forEach((g) => {
+            let material = g.type === "file"? solidMaterial.clone() : wireMaterial;
+            let geometry = new THREE.PlaneGeometry(g.width, g.height);
+            let mesh = new THREE.Mesh(geometry, material);
 
-                drawTree(nodes[i], ctx, innerbounds, !vertical);
+            if (g.type === "file")
+                mesh.material.color.setHex((g.color.r << 16) | (g.color.g << 8) | g.color.b);
 
-                x += thickness;
-            }
-        }
+            mesh.position.x = g.x + g.width / 2 - 256;
+            mesh.position.y = g.y + g.height / 2 - 256;
+            mesh.position.z = g.z;
+
+            rootObj.add(mesh);
+        });
+
+        scene.add(rootObj);
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        document.body.appendChild(renderer.domElement);
     }
-};
 
-const filetree = tree.getFileTree("./node_modules");
+    function animate() {
+        requestAnimationFrame(animate);
 
-const canvas = document.getElementById("viewport");
+        rootObj.rotation.x += vx;
+        rootObj.rotation.y += vy;
 
-const ctx = canvas.getContext("2d");
-ctx.clearRect(0, 0, canvas.width, canvas.height);
+        renderer.render(scene, camera);
+    }
 
-drawTree(filetree, ctx, { x: 0, y: 0, width: canvas.width, height: canvas.height });
+    window.onkeydown = function(event) {
+        switch (event.keyCode) {
+            case 87:
+                vx = 0.01;
+                break;
+            case 83:
+                vx = -0.01;
+                break;
+            case 65:
+                vy = 0.01;
+                break;
+            case 68:
+                vy = -0.01;
+                break;
+        }
+    };
+
+    window.onkeyup = function(event) {
+        switch (event.keyCode) {
+            case 87:
+                vx = 0.0;
+                break;
+            case 83:
+                vx = 0.0;
+                break;
+            case 65:
+                vy = 0.0;
+                break;
+            case 68:
+                vy = 0.0;
+                break;
+        }
+    };
+
+    init();
+    animate();
+})();

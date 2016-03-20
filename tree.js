@@ -1,6 +1,8 @@
 "use strict";
 
-let fs = require("fs");
+const fs = require("fs");
+const path = require("path");
+const crypto = require('crypto');
 
 const getFileTree = function(filepath) {
     const fileStats = fs.lstatSync(filepath);
@@ -23,12 +25,13 @@ const getFileTree = function(filepath) {
 
         return {
             type: "file",
-            hash: md5sum.digest("hex"),
+            hash: md5sum.digest(),
             size: fileStats.size
         };
     } else {
         return {
             type: "file",
+            hash: 0,
             size: 0
         };
     }

@@ -1,3 +1,4 @@
 {
-    node: false
+    "node": false,
+    "esversion": 6
 }

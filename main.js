@@ -4,8 +4,6 @@ const electron = require('electron');
 const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 
-const tree = require("./tree");
-
 let mainWindow;
 
 function createWindow () {
