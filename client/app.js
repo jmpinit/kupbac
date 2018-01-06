@@ -29,7 +29,7 @@
         let wireMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
         let solidMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide });
 
-        const ftree = tree.getFileTree("./node_modules");
+        const ftree = tree.getFileTree("./");
         const fsGeometry = fsgeo.build(ftree, { x: 0, y: 0, z: 0, width: 512, height: 512, step: 1 });
 
         rootObj = new THREE.Object3D();
